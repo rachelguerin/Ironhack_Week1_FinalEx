@@ -7,80 +7,95 @@ module GetFileContents
 		input
 	end
 end
+
 module Movements
-	def is_horizontal(o,d)
-		o[0] == d[0] ? true : false
+	def is_horizontal(origin,destination)
+		origin[0] == destination[0] ? true : false
 	end
 
-	def is_vertical(o,d)
-		o[1] == d[1] ? true : false
+	def is_vertical(origin,destination)
+		origin[1] == destination[1] ? true : false
 	end
 
-	def is_diagonal(o,d)
+	def is_diagonal(origin,destination)
 
-		diffO = o.max - o.min
-		diffD = d.max - d.min
+		diffO = origin.max - origin.min
+		diffD = destination.max - destination.min
 
-		diffX = (o[0] - d[0]).abs
-		diffY = (o[1] - d[1]).abs
+		diffX = (origin[0] - destination[0]).abs
+		diffY = (origin[1] - destination[1]).abs
 
-		#diffX == diffY && diffO == diffD ? true : false
 		diffX == diffY ? true : false
 
 	end
 
-	def is_one_step(o,d)
-		if is_vertical(o,d) 
-			(d[0]-o[0]).abs == 1 ? true : false
-		elsif is_horizontal(o,d)
-			(d[1]-o[1]).abs == 1 ? true : false
-		else #is_diagonal(o,d)
-			(d[0]-o[0]).abs && (d[1]-o[1]).abs == 1 ? true : false
+	def is_one_step(origin,destination)
+		if is_vertical(origin,destination) 
+			(destination[0]-origin[0]).abs == 1 ? true : false
+		elsif is_horizontal(origin,destination)
+			(destination[1]-origin[1]).abs == 1 ? true : false
+		else #is_diagonal(origin,destination)
+			(destination[0]-origin[0]).abs && (destination[1]-origin[1]).abs == 1 ? true : false
 
 		end
 
 	end
 	
-	def is_two_steps(o,d)
-		(d[0]-o[0]).abs == 2 || (d[1]-o[1]).abs == 2 ? true : false
+	def is_two_steps(origin,destination)
+		(destination[0]-origin[0]).abs == 2 || (destination[1]-origin[1]).abs == 2 ? true : false
 	end
 
-	def is_forward(o,d)
-		#binding.pry
+	def is_forward(origin,destination)
 		if @color == "w"
-			d[0] > o[0] ? true : false
+			destination[0] > origin[0] ? true : false
 		elsif @color == "b"
-			d[0] < o[0] ? true : false
+			destination[0] < origin[0] ? true : false
 		end
 	end
 	
-	def is_L(o,d)
-		#binding.pry
-		!is_vertical(o,d) && !is_horizontal(o,d) && !is_diagonal(o,d) && is_two_steps(o,d)		
+	def is_L(origin,destination)
+		!is_vertical(origin,destination) && !is_horizontal(origin,destination) && !is_diagonal(origin,destination) && is_two_steps(origin,destination)		
 	end
 end
 
 class Moves
+	attr_reader :moves
 	include GetFileContents
+
 	def initialize(movefile)
 		@moves = get_contents(movefile)
 	end
-
-
 end
 
 class Board
 	include GetFileContents
 	attr_reader :board
+
 	def initialize(boardfile)
 		@board = set_board(boardfile)
 		@pieces = { bP: Pawn, bR: Rook, bN: Knight, bB: Bishop, bQ: Queen, bK: King,
 					wP: Pawn, wR: Rook, wN: Knight, wB: Bishop, wQ: Queen, wK: King
 				}
-		# @positions = { a1: [], a2: [], a3: [], a4: [], a5: [], a6: a7: a8:
-		# 				1,2,3,4,5,6,7,8
+		@positions = set_positions
+		#binding.pry
+	end
 
-		# 		}
+	def set_positions
+		letters = "abcdefgh"
+		numbers = "12345678"
+		positions = []
+		x_coords = "01234567"
+		y_coords = "01234567"
+		xy_coords = []
+
+		posHash = { }
+
+		numbers.split(//).each { |n| letters.split(//).each { |l| positions.push((l + n).to_sym) } }
+
+		x_coords.split(//).each { |x| y_coords.split(//).each { |y| xy_coords.push([x.to_i , y.to_i]) } }
+
+		positions.each_with_index {|p,i| posHash[p] = xy_coords[i] }
+		posHash
 	end
 
 	def set_board(boardfile)
@@ -91,21 +106,29 @@ class Board
 			i.map! { |j| j.to_sym }
 		end
 
-		input
+		input.reverse
 	end
 
-	def get_piece(pos)
-		
-	
-
+	def check_moves(movesObj)
+		movesObj.moves.each do |m|
+			puts validate_move(@positions[m.split[0].to_sym],@positions[m.split[1].to_sym])
+		end
 	end
 
 	def validate_move(orig,dest)
+		piece = get_piece_at_origin(orig)
+		if piece
+			myPiece = @pieces[piece].new(piece)
+			myPiece.valid_direction(orig,dest)
+		else
+			false
+		end
 
-		myPiece = @pieces[@board[orig[0]][orig[1]]].new(@board[orig[0]][orig[1]])
-		puts "orig #{orig} dest #{dest} valid? #{myPiece.valid_direction(orig,dest)}"
 	end
 
+	def get_piece_at_origin(orig)
+		@board[orig[0]][orig[1]] != :"--" ? @board[orig[0]][orig[1]] : nil
+	end
 end
 
 class Piece
@@ -124,12 +147,11 @@ class Pawn < Piece
 		@firstMove = true
 	end
 
-	def valid_direction(o,d)
-		#binding.pry
+	def valid_direction(origin,destination)
 		if @firstMove 
-			is_vertical(o,d) && is_forward(o,d) && (is_two_steps(o,d) || is_one_step(o,d))
+			is_vertical(origin,destination) && is_forward(origin,destination) && (is_two_steps(origin,destination) || is_one_step(origin,destination))
 		else
-			is_vertical(o,d) && is_forward(o,d) && is_one_step(o,d) ? true : false
+			is_vertical(origin,destination) && is_forward(origin,destination) && is_one_step(origin,destination) ? true : false
 		end
 
 	end
@@ -137,115 +159,39 @@ end
 
 class Rook < Piece
 	
-	def valid_direction(o,d)
-		is_horizontal(o,d) || is_vertical(o,d)
+	def valid_direction(origin,destination)
+		is_horizontal(origin,destination) || is_vertical(origin,destination)
 	end
 end
 
 class Bishop < Piece
-	def valid_direction(o,d)
-		is_diagonal(o,d)
+	def valid_direction(origin,destination)
+		is_diagonal(origin,destination)
 	end
 end
 
 class Queen < Piece
-
-	def valid_direction(o,d)
-		is_diagonal(o,d) || is_vertical(o,d) || is_horizontal
+	def valid_direction(origin,destination)
+		is_diagonal(origin,destination) || is_vertical(origin,destination) || is_horizontal
 	end
-
 
 end
 
 class King < Piece
-	def valid_direction(o,d)
-		is_one_step(o,d)
+	def valid_direction(origin,destination)
+		is_one_step(origin,destination)
 	end
 end
 
 class Knight < Piece
-	def valid_direction(o,d)
-		is_L(o,d)
+	def valid_direction(origin,destination)
+		is_L(origin,destination)
 	end
 end
 
 myBoard = Board.new("simple_board.txt")
-myMoves = Moves.new("simple_moves.txt")
 
-pos = [0,0]
-des = [1,0]
-#puts "position #{pos} #{myBoard.get_piece(pos)}"
-puts "legal move #{pos} #{des} #{myBoard.validate_move(pos,des)}"
-# #myBoard.set_board
-# puts myBoard.inspect
+myBoard.check_moves(Moves.new("simple_moves.txt"))
 
 
 
-#bQ = Queen.new(:bQ)
-# puts "a1 to a8: #{bQ.valid_direction([0,0],[0,8])}" #true
-# puts "a1 to h8: #{bQ.valid_direction([0,0],[8,0])}" #true
-# puts "a1 to b4: #{bQ.valid_direction([0,0],[3,1])}" #true - diagonal
-# puts "b3 to a2: #{bQ.valid_direction([2,1],[1,0])}" #true - diagonal
-# puts "b3 to b3: #{bQ.valid_direction([2,1],[2,1])}" #true - diagonal
-
-#bB = Bishop.new(:bB)
-# puts "a1 to a8: #{bB.piece} #{bB.valid_direction([0,0],[0,8])}" #false
-# puts "a1 to h8: #{bB.piece} #{bB.valid_direction([0,0],[8,0])}" #false
-# puts "a1 to b4: #{bB.piece} #{bB.valid_direction([0,0],[3,3])}" #true - diagonal
-# puts "b3 to a2: #{bB.piece} #{bB.valid_direction([2,1],[1,0])}" #true - diagonal
-
-
-#bR = Rook.new(:bR)
-
-# puts "a1 to a8: #{bR.piece} #{bR.valid_direction([0,0],[0,8])}" #true
-# puts "a1 to h8: #{bR.piece} #{bR.valid_direction([0,0],[8,0])}" #true
-# puts "a1 to b4: #{bR.piece} #{bR.valid_direction([0,0],[3,1])}" #false - diagonal
-
-#bK = King.new(:bK)
-# puts "a1 to a8: #{bK.piece} #{bK.valid_direction([0,0],[0,8])}" #false
-# puts "a1 to h8: #{bK.piece} #{bK.valid_direction([0,0],[8,0])}" #false
-# puts "a1 to h8: #{bK.piece} #{bK.valid_direction([1,1],[1,2])}" #true
-# puts "a1 to h8: #{bK.piece} #{bK.valid_direction([1,1],[0,2])}" #true
-# puts "a1 to h8: #{bK.piece} #{bK.valid_direction([1,1],[0,1])}" #true
-# puts "a1 to h8: #{bK.piece} #{bK.valid_direction([1,1],[0,0])}" #true
-# puts "a1 to h8: #{bK.piece} #{bK.valid_direction([1,1],[1,0])}" #true
-# puts "a1 to h8: #{bK.piece} #{bK.valid_direction([1,1],[2,0])}" #true
-
-
-
-
-
-#wP = Pawn.new(:wP)
-#bP = Pawn.new(:bP)
-	
-# puts "#{wP.piece} #{wP.valid_direction([0,0],[2,0])}" #true
-# puts "#{wP.piece} #{wP.valid_direction([0,0],[0,1])}" #false
-# puts "#{wP.piece} #{wP.valid_direction([0,0],[1,0])}" #true
-# puts "#{wP.piece} #{wP.valid_direction([0,0],[0,2])}" #false
-# puts "#{wP.piece} #{wP.valid_direction([7,0],[5,0])}" #false 
-
-# puts "#{bP.piece} #{bP.valid_direction([7,0],[5,0])}" #true
-# puts "#{bP.piece} #{bP.valid_direction([7,0],[5,0])}" #true
-
-bN = Knight.new(:bN)
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[4,4])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[3,5])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[1,5])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[0,4])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[0,2])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[1,1])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[3,1])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[4,2])}" #true
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[3,3])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[3,4])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[2,4])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[1,4])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[1,3])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[4,1])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[4,3])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[4,5])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[2,5])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[0,5])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[0,3])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[0,1])}" #false
-# puts "#{bN.piece} #{bN.valid_direction([2,3],[2,1])}" #false
