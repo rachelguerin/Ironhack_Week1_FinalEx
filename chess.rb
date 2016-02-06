@@ -111,24 +111,33 @@ class Board
 
 	def check_moves(movesObj)
 		movesObj.moves.each do |m|
-			puts validate_move(@positions[m.split[0].to_sym],@positions[m.split[1].to_sym])
+			msg = validate_move(@positions[m.split[0].to_sym],@positions[m.split[1].to_sym])
+			puts "#{msg ? "LEGAL" : "ILLEGAL"}"	
 		end
 	end
 
 	def validate_move(orig,dest)
-		piece = get_piece_at_origin(orig)
-		if piece
-			myPiece = @pieces[piece].new(piece)
-			myPiece.valid_direction(orig,dest)
+		movingPieceSymbol = get_piece(orig)
+		destinationPieceSymbol = get_piece(dest)
+		if movingPieceSymbol && !(same_color(movingPieceSymbol,destinationPieceSymbol))	
+
+			pieceAtDestination = get_piece(dest)
+			movingPiece = @pieces[movingPieceSymbol].new(movingPieceSymbol)	
+			movingPiece.valid_direction(orig,dest)
 		else
 			false
 		end
 
 	end
 
-	def get_piece_at_origin(orig)
-		@board[orig[0]][orig[1]] != :"--" ? @board[orig[0]][orig[1]] : nil
+	def get_piece(location)
+		@board[location[0]][location[1]] != :"--" ? @board[location[0]][location[1]] : nil
 	end
+
+	def same_color(orig,dest)
+		orig.to_s.chr == dest.to_s.chr
+	end
+
 end
 
 class Piece
@@ -172,7 +181,7 @@ end
 
 class Queen < Piece
 	def valid_direction(origin,destination)
-		is_diagonal(origin,destination) || is_vertical(origin,destination) || is_horizontal
+		is_diagonal(origin,destination) || is_vertical(origin,destination) || is_horizontal(origin,destination)
 	end
 
 end
@@ -189,9 +198,11 @@ class Knight < Piece
 	end
 end
 
-myBoard = Board.new("simple_board.txt")
+# myBoard = Board.new("simple_board.txt")
 
-myBoard.check_moves(Moves.new("simple_moves.txt"))
+# myBoard.check_moves(Moves.new("simple_moves.txt"))
 
+myBoard = Board.new("complex_board.txt")
 
+myBoard.check_moves(Moves.new("complex_moves.txt"))
 
