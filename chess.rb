@@ -56,6 +56,15 @@ module Movements
 	def is_L(origin,destination)
 		!is_vertical(origin,destination) && !is_horizontal(origin,destination) && !is_diagonal(origin,destination) && is_two_steps(origin,destination)		
 	end
+
+	def is_right(orig,dest) 
+		orig[1] < dest[1] ? true : false
+	end
+
+	def is_up(orig,dest)
+		orig[0] < dest[0] ? true : false 
+	end
+
 end
 
 class Moves
@@ -77,7 +86,6 @@ class Board
 					wP: Pawn, wR: Rook, wN: Knight, wB: Bishop, wQ: Queen, wK: King
 				}
 		@positions = set_positions
-		#binding.pry
 	end
 
 	def set_positions
@@ -123,7 +131,7 @@ class Board
 
 			pieceAtDestination = get_piece(dest)
 			movingPiece = @pieces[movingPieceSymbol].new(movingPieceSymbol)	
-			movingPiece.valid_direction(orig,dest)
+			movingPiece.valid_direction(orig,dest) && path_clear(movingPiece,orig,dest) ? true : false
 		else
 			false
 		end
@@ -138,6 +146,53 @@ class Board
 		orig.to_s.chr == dest.to_s.chr
 	end
 
+	def path_clear(piece,orig,dest)
+		result = []
+		if piece.is_horizontal(orig,dest) 
+			if piece.is_right(orig,dest)
+				(orig[1]+1..dest[1]-1).each do |y|
+					result.push(get_piece([orig[0],y]))
+				end
+			else
+				(dest[1]+1..orig[1]-1).each do |y|
+					result.push(get_piece([orig[0],y]))
+				end
+			end		
+		end
+
+		if piece.is_vertical(orig,dest) 
+			if piece.is_up(orig,dest)
+				(orig[0]+1..dest[0]-1).each do |x|
+					result.push(get_piece([x,orig[1]]))
+				end
+			else
+				(dest[0]+1..orig[0]-1).each do |x|
+					result.push(get_piece([x,orig[1]]))
+				end
+			end
+		end
+
+		if piece.is_diagonal(orig,dest)
+			if piece.is_up(orig,dest) && piece.is_right(orig,dest)
+				(orig[0]+1..dest[0]-1).each_with_index do |x,i|
+					result.push(get_piece([x,orig[1]+1+i]))
+				end
+			elsif !piece.is_up(orig,dest) && piece.is_right(orig,dest)
+				(orig[1]+1..dest[1]-1).each_with_index do |y,i|
+					result.push(get_piece([orig[0]-1-i,y]))
+				end
+			elsif piece.is_up(orig,dest) && !piece.is_right(orig,dest)
+				(orig[0]+1..dest[0]-1).each_with_index do |x,i|
+					result.push(get_piece([x,orig[1]-1-i]))
+				end
+			else
+				(dest[0]+1..orig[0]-1).each_with_index do |x,i|
+					result.push(get_piece([orig[0]-1-i,orig[1]-1-i]))
+				end
+			end
+		end
+		result.none? 
+	end
 end
 
 class Piece
@@ -147,6 +202,7 @@ class Piece
 		@piece = piece
 		@color = @piece.to_s.chr
 	end
+	
 
 end
 
